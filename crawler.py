@@ -71,5 +71,6 @@ def crawl_web(seed):
             crawled.append(page)
     return index
 
-
-print crawl_web('http://www.udacity.com/cs101x/index.html')
+#demo
+pageURL = 'http://snap.stanford.edu/'
+print crawl_web(pageURL)

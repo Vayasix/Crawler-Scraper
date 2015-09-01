@@ -1,9 +1,12 @@
-#Finishing the page ranking algorithm.
+from pyquery import PyQuery as pq
+from lxml import etree
+from urllib import urlopen
 
+#Simple page ranking algorithm.
+#calc the weight of each page url
 def compute_ranks(graph):
     d = 0.8 # damping factor
     numloops = 10
-    
     ranks = {}
     npages = len(graph)
     for page in graph:
@@ -20,125 +23,14 @@ def compute_ranks(graph):
         ranks = newranks
     return ranks
 
+def generate_pyquery_object(page_url):
+    Obj = pq("<html></html>")
+    Obj = pq(etree.fromstring("<html></html>"))
+    Obj = pq(url=page_url)
+    Obj = pq(url=page_url, opener=lambda url, **kw: urlopen(url).read())
+    #Obj = pq(filename=path_to_html_file)
+    return Obj
 
-
-cache = {
-   'http://udacity.com/cs101x/urank/index.html': """<html>
-<body>
-<h1>Dave's Cooking Algorithms</h1>
-<p>
-Here are my favorite recipies:
-<ul>
-<li> <a href="http://udacity.com/cs101x/urank/hummus.html">Hummus Recipe</a>
-<li> <a href="http://udacity.com/cs101x/urank/arsenic.html">World's Best Hummus</a>
-<li> <a href="http://udacity.com/cs101x/urank/kathleen.html">Kathleen's Hummus Recipe</a>
-</ul>
-
-For more expert opinions, check out the 
-<a href="http://udacity.com/cs101x/urank/nickel.html">Nickel Chef</a> 
-and <a href="http://udacity.com/cs101x/urank/zinc.html">Zinc Chef</a>.
-</body>
-</html>
-
-
-
-
-
-
-""", 
-   'http://udacity.com/cs101x/urank/zinc.html': """<html>
-<body>
-<h1>The Zinc Chef</h1>
-<p>
-I learned everything I know from 
-<a href="http://udacity.com/cs101x/urank/nickel.html">the Nickel Chef</a>.
-</p>
-<p>
-For great hummus, try 
-<a href="http://udacity.com/cs101x/urank/arsenic.html">this recipe</a>.
-
-</body>
-</html>
-
-
-
-
-
-
-""", 
-   'http://udacity.com/cs101x/urank/nickel.html': """<html>
-<body>
-<h1>The Nickel Chef</h1>
-<p>
-This is the
-<a href="http://udacity.com/cs101x/urank/kathleen.html">
-best Hummus recipe!
-</a>
-
-</body>
-</html>
-
-
-
-
-
-
-""", 
-   'http://udacity.com/cs101x/urank/kathleen.html': """<html>
-<body>
-<h1>
-Kathleen's Hummus Recipe
-</h1>
-<p>
-
-<ol>
-<li> Open a can of garbonzo beans.
-<li> Crush them in a blender.
-<li> Add 3 tablesppons of tahini sauce.
-<li> Squeeze in one lemon.
-<li> Add salt, pepper, and buttercream frosting to taste.
-</ol>
-
-</body>
-</html>
-
-""", 
-   'http://udacity.com/cs101x/urank/arsenic.html': """<html>
-<body>
-<h1>
-The Arsenic Chef's World Famous Hummus Recipe
-</h1>
-<p>
-
-<ol>
-<li> Kidnap the <a href="http://udacity.com/cs101x/urank/nickel.html">Nickel Chef</a>.
-<li> Force her to make hummus for you.
-</ol>
-
-</body>
-</html>
-
-""", 
-   'http://udacity.com/cs101x/urank/hummus.html': """<html>
-<body>
-<h1>
-Hummus Recipe
-</h1>
-<p>
-
-<ol>
-<li> Go to the store and buy a container of hummus.
-<li> Open it.
-</ol>
-
-</body>
-</html>
-
-
-
-
-""", 
-}
 
 def crawl_web(seed): # returns index, graph of inlinks
     tocrawl = [seed]
@@ -147,15 +39,12 @@ def crawl_web(seed): # returns index, graph of inlinks
     index = {} 
     while tocrawl: 
         page = tocrawl.pop()
+        print tocrawl
         if page not in crawled:
             content = get_page(page)
             add_page_to_index(index, page, content)
             outlinks = get_all_links(content)
-            
-            
             graph[page] = outlinks
-            
-            
             union(tocrawl, outlinks)
             crawled.append(page)
     return index, graph
@@ -166,25 +55,15 @@ def get_page(url):
         return cache[url]
     else:
         return None
-    
-def get_next_target(page):
-    start_link = page.find('<a href=')
-    if start_link == -1: 
-        return None, 0
-    start_quote = page.find('"', start_link)
-    end_quote = page.find('"', start_quote + 1)
-    url = page[start_quote + 1:end_quote]
-    return url, end_quote
 
-def get_all_links(page):
+def get_all_links(content):
     links = []
-    while True:
-        url, endpos = get_next_target(page)
+    html = pq(content)
+    a_tags = html.find('a')
+    for a_tag in a_tags:
+        url = pq(a_tag).attr('href')
         if url:
             links.append(url)
-            page = page[endpos:]
-        else:
-            break
     return links
 
 
@@ -194,6 +73,8 @@ def union(a, b):
             a.append(e)
 
 def add_page_to_index(index, url, content):
+    if content == None: return
+    content = content.text()
     words = content.split()
     for word in words:
         add_to_index(index, word, url)
@@ -210,18 +91,19 @@ def lookup(index, keyword):
     else:
         return None
 
-index, graph = crawl_web('http://udacity.com/cs101x/urank/index.html')
+def parse_html(page_url):
+    return pq(url = page_url)
+
+""" demo """
+#you can insert your own links into page_urls
+page_urls = ['http://snap.stanford.edu', 'http://snap.stanford.edu/links.html']
+cache = {}
+for page_url in page_urls:
+    html_pqObj = parse_html(page_url)
+    cache[page_url] = html_pqObj
+
+seed_page_url = page_urls[0]
+index, graph = crawl_web(seed_page_url)
 ranks = compute_ranks(graph)
 print ranks
-
-#>>> {'http://udacity.com/cs101x/urank/kathleen.html': 0.11661866666666663,
-#'http://udacity.com/cs101x/urank/zinc.html': 0.038666666666666655,
-#'http://udacity.com/cs101x/urank/hummus.html': 0.038666666666666655,
-#'http://udacity.com/cs101x/urank/arsenic.html': 0.054133333333333325,
-#'http://udacity.com/cs101x/urank/index.html': 0.033333333333333326,
-#'http://udacity.com/cs101x/urank/nickel.html': 0.09743999999999997}
-
-
-
-
 
